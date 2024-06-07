@@ -22,8 +22,8 @@ def rename_files_md5(file_dir, filename_md5_table):
         os.rename(os.path.join(file_dir, filename), os.path.join(file_dir, md5 + '.pdf'))
 
 if __name__ == '__main__':
-    file_dir = '/public/home/bdpstu/xintianle/textbooks/libgen/test-pdfs'
-    filename_md5_table_path = '/public/home/bdpstu/xintianle/textbooks/libgen/test_pdfs_md5_table.csv'
+    file_dir = '/public/home/bdpstu/xintianle/textbooks/libgen/pdf'
+    filename_md5_table_path = '/public/home/bdpstu/xintianle/textbooks/libgen/pdf_md5_table.csv'
     filename_md5_table = get_filename_md5_table(file_dir)
-    filename_md5_table.to_csv('filename_md5_table.csv', index=False)
+    filename_md5_table.to_csv(filename_md5_table_path, index=False)
     rename_files_md5(file_dir, filename_md5_table)
