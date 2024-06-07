@@ -34,8 +34,7 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
     file_dir = '/public/home/bdpstu/xintianle/textbooks/libgen/test-pdfs'
     save_dir = '/public/home/bdpstu/xintianle/textbooks/libgen/grobid-output'
-    os.makedirs(save_dir, exist_ok=True)
-    assign_tasks(file_dir, save_dir, process_func=processFulltextDocuments)
+    assign_tasks(file_dir, save_dir)
 
 
 
