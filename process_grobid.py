@@ -7,32 +7,39 @@ import requests
 import os
 
 
-def processFulltextDocuments(paired_path, port):
-    for file_path, save_path in tqdm(paired_path, total=len(paired_path), desc=f'Processing files on port {port}'):
-        try:
-            url = f'http://127.0.0.1:{port}/api/processFulltextDocument'
-            files = {'input': open(file_path, 'rb')}
-            header = {'Accept': 'application/xml'}
+def processFulltextDocument(paired_path, port):
+    file_path, save_path = paired_path
+    url = f'http://127.0.0.1:{port}/api/processFulltextDocument'
+    header = {'Accept': 'application/xml'}
+    try:
+        with open(file_path, 'rb') as f:
+            files = {'input': f}
             res = requests.post(url=url, files=files, headers=header, timeout=600)
-            assert res.status_code == 200
-            with open(save_path, 'wb') as f:
-                f.write(res.content)
-        except Exception as e:
-            logging.error(f"Error processing {file_path}: {e}")
+        res.raise_for_status()
+        with open(save_path, 'wb') as f:
+            f.write(res.content)
+    except Exception as e:
+        logging.error(f"Error processing {file_path} on port {port}: {e}")
 
 def assign_tasks(file_dir, save_dir, ports=[8086, 8186, 8286, 8386]):
-    file_paths = [os.path.join(file_dir, filename) for filename in os.listdir(file_dir) if filename.endswith('.pdf')]
-    save_paths = [os.path.join(save_dir, filename) for filename in os.listdir(file_dir) if filename.endswith('.pdf')]
-    paired_path = list(zip(file_paths, save_paths))
-    assigned_paired_path = np.array_split(paired_path, len(ports))
+    file_paths = [os.path.join(file_dir, filename) for filename in os.listdir(file_dir) if filename.endswith('.pdf') and not os.path.exists(os.path.join(save_dir, filename.replace('.pdf', '.xml')))]
+    paired_paths = [(file_path, os.path.join(save_dir, os.path.basename(file_path).replace('.pdf', '.xml'))) for file_path in file_paths]
+    logging.info(f'Assigning {len(paired_paths)} tasks to {len(ports)} ports.')
+    
     pool = Pool(processes=len(ports))
-    for i, port in enumerate(ports):
-        pool.apply_async(processFulltextDocuments, args=(assigned_paired_path[i], port))
+    pbar = tqdm(total=len(paired_paths), desc="Processing tasks")
+    update = lambda *args: pbar.update()
+    for i, paired_path in enumerate(paired_paths):
+        port = ports[i % len(ports)]
+        result = pool.apply_async(processFulltextDocument, args=(paired_path, port), callback=update)
+    
+    pool.close()
+    pool.join()
     logging.info('All tasks finished.')
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
-    file_dir = '/public/home/bdpstu/xintianle/textbooks/libgen/test-pdfs'
+    file_dir = '/public/home/bdpstu/xintianle/textbooks/libgen/pdf'
     save_dir = '/public/home/bdpstu/xintianle/textbooks/libgen/grobid-output'
     assign_tasks(file_dir, save_dir)
 
