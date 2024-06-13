@@ -22,6 +22,9 @@ def processFulltextDocument(paired_path, port):
         logging.error(f"Error processing {file_path} on port {port}: {e}")
 
 def assign_tasks(file_dir, save_dir, ports=[8086, 8186, 8286, 8386]):
+    # ports: grobid服务端口
+    # file_dir: 待处理pdf文件目录
+    # save_dir: 处理结果保存目录
     file_paths = [os.path.join(file_dir, filename) for filename in os.listdir(file_dir) if filename.endswith('.pdf') and not os.path.exists(os.path.join(save_dir, filename.replace('.pdf', '.xml')))]
     paired_paths = [(file_path, os.path.join(save_dir, os.path.basename(file_path).replace('.pdf', '.xml'))) for file_path in file_paths]
     logging.info(f'Assigning {len(paired_paths)} tasks to {len(ports)} ports.')
@@ -39,8 +42,8 @@ def assign_tasks(file_dir, save_dir, ports=[8086, 8186, 8286, 8386]):
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
-    file_dir = '/public/home/bdpstu/xintianle/textbooks/libgen/pdf'
-    save_dir = '/public/home/bdpstu/xintianle/textbooks/libgen/grobid-output'
+    file_dir = '/public/home/bdpstu/username/pdfdir'
+    save_dir = '/public/home/bdpstu/username/outputdir'
     assign_tasks(file_dir, save_dir)
 
 
