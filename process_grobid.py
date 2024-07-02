@@ -15,14 +15,14 @@ def processFulltextDocument(paired_path: tuple[str, str], port: int, **kwargs):
     try:
         with open(file_path, 'rb') as f:
             file = {'input': f}
-        res = requests.post(url=api, files=file, headers=header, timeout=kwargs.get('timeout', 600))
+            res = requests.post(url=api, files=file, headers=header, timeout=kwargs.get('timeout', 600))
         res.raise_for_status()
         with open(save_path, 'wb') as f:
             f.write(res.content)
     except Exception as e:
         logging.error(f"Error processing {file_path} on port {port}: {e}")
 
-def assign_tasks(file_dir: str, save_dir: str, ports=[8086, 8186, 8286, 8386], **kwargs):
+def assign_tasks(file_dir: str, save_dir: str, ports, **kwargs):
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
     file_paths = [os.path.join(file_dir, filename) for filename in os.listdir(file_dir) if filename.endswith('.pdf')]
