@@ -1,49 +1,60 @@
 from multiprocessing import Pool
 from tqdm import tqdm
-import logging
-import numpy as np
-import pandas as pd
 import requests
+import argparse
+import logging
+import time
 import os
 
 
-def processFulltextDocument(paired_path, port):
+def processFulltextDocument(paired_path: tuple[str, str], **kwargs):
     file_path, save_path = paired_path
-    url = f'http://127.0.0.1:{port}/api/processFulltextDocument'
+    url = kwargs.get('url', 'http://127.0.0.1')
+    port = kwargs.get('port', 8086)
+    api = f'{url}:{port}/api/processFulltextDocument'
     header = {'Accept': 'application/xml'}
     try:
         with open(file_path, 'rb') as f:
-            files = {'input': f}
-            res = requests.post(url=url, files=files, headers=header, timeout=600)
+            file = {'input': f}
+        res = requests.post(url=api, files=file, headers=header, timeout=kwargs.get('timeout', 600))
         res.raise_for_status()
         with open(save_path, 'wb') as f:
             f.write(res.content)
     except Exception as e:
         logging.error(f"Error processing {file_path} on port {port}: {e}")
 
-def assign_tasks(file_dir, save_dir, ports=[8086, 8186, 8286, 8386]):
-    # ports: grobid服务端口
-    # file_dir: 待处理pdf文件目录
-    # save_dir: 处理结果保存目录
-    file_paths = [os.path.join(file_dir, filename) for filename in os.listdir(file_dir) if filename.endswith('.pdf') and not os.path.exists(os.path.join(save_dir, filename.replace('.pdf', '.xml')))]
+def assign_tasks(file_dir: str, save_dir: str, ports=[8086, 8186, 8286, 8386], **kwargs):
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+    file_paths = [os.path.join(file_dir, filename) for filename in os.listdir(file_dir) if filename.endswith('.pdf')]
     paired_paths = [(file_path, os.path.join(save_dir, os.path.basename(file_path).replace('.pdf', '.xml'))) for file_path in file_paths]
-    logging.info(f'Assigning {len(paired_paths)} tasks to {len(ports)} ports.')
-    
-    pool = Pool(processes=len(ports))
+    logging.info(f'Assigning {len(paired_paths)} tasks to ports: {ports}.')
+
+    start = time.time()
+    pool = Pool(processes=min(len(ports), len(paired_paths)))
     pbar = tqdm(total=len(paired_paths), desc="Processing tasks")
     update = lambda *args: pbar.update()
     for i, paired_path in enumerate(paired_paths):
+        if not kwargs.get('force', False) and os.path.exists(paired_path[1]):
+            logging.info(f"File {paired_path[1]} already exists, skipped.")
+            update()
+            continue
         port = ports[i % len(ports)]
-        result = pool.apply_async(processFulltextDocument, args=(paired_path, port), callback=update)
+        res = pool.apply_async(processFulltextDocument, args=(paired_path, port), callback=update)
     
     pool.close()
     pool.join()
-    logging.info('All tasks finished.')
+    end = time.time()
+    logging.info('All tasks finished in %.2f seconds.', end - start)
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
-    file_dir = '/public/home/bdpstu/username/pdfdir'
-    save_dir = '/public/home/bdpstu/username/outputdir'
-    assign_tasks(file_dir, save_dir)
-
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--input', type=str, help='path to the directory containing PDF files')
+    parser.add_argument('--output', type=str, required=False, default='.', help='path to the directory where to put the results(optional)')
+    parser.add_argument('--port', required=False, action='append', type=int, help='port number of the GROBID service(optional)')
+    parser.add_argument('--force', action='store_true', help='force re-processing pdf input files when tei output files already exist')
+    parser.add_argument('--verbose', action='store_true', help='print information about processed files in the console')
+    args = parser.parse_args()
+    assign_tasks(args.input, args.output, args.port)
 
