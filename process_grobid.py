@@ -7,10 +7,9 @@ import time
 import os
 
 
-def processFulltextDocument(paired_path: tuple[str, str], **kwargs):
+def processFulltextDocument(paired_path: tuple[str, str], port: int, **kwargs):
     file_path, save_path = paired_path
     url = kwargs.get('url', 'http://127.0.0.1')
-    port = kwargs.get('port', 8086)
     api = f'{url}:{port}/api/processFulltextDocument'
     header = {'Accept': 'application/xml'}
     try:
@@ -51,7 +50,7 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
     parser = argparse.ArgumentParser()
     parser.add_argument('--input', type=str, help='path to the directory containing PDF files')
-    parser.add_argument('--output', type=str, required=False, default='.', help='path to the directory where to put the results(optional)')
+    parser.add_argument('--output', type=str, required=False, default='output', help='path to the directory where to put the results(optional)')
     parser.add_argument('--port', required=False, action='append', type=int, help='port number of the GROBID service(optional)')
     parser.add_argument('--force', action='store_true', help='force re-processing pdf input files when tei output files already exist')
     parser.add_argument('--verbose', action='store_true', help='print information about processed files in the console')
